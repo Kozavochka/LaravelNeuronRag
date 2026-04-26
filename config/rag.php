@@ -57,4 +57,13 @@ return [
         ],
         'runtime_available' => $toBool(env('RAG_RUNTIME_AVAILABLE', false), false),
     ],
+
+    'costs' => [
+        'models' => [
+            'openrouter/auto' => [
+                'input_per_1m' => (float) env('RAG_COST_OPENROUTER_AUTO_INPUT_PER_1M', 0),
+                'output_per_1m' => (float) env('RAG_COST_OPENROUTER_AUTO_OUTPUT_PER_1M', 0),
+            ],
+        ],
+    ],
 ];
