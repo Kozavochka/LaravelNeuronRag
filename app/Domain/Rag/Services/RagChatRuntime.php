@@ -7,14 +7,19 @@ namespace App\Domain\Rag\Services;
 use App\Domain\Rag\DTO\RagChatRequest;
 use App\Domain\Rag\DTO\RagChatResult;
 use App\Domain\Rag\DTO\RagChatSource;
+use App\Domain\Rag\DTO\RagQueryUsage;
+use App\Domain\Rag\Services\Telemetry\RagQueryTelemetry;
 use App\Neuron\DocumentRAG;
 use NeuronAI\Chat\Messages\UserMessage;
+use NeuronAI\Chat\Messages\Usage;
 
 class RagChatRuntime
 {
     public function __construct(
         private RagQueryLogger $queryLogger,
         private DocumentRAG $rag,
+        private RagQueryTelemetry $telemetry,
+        private CostEstimator $costEstimator,
     ) {
     }
 
@@ -36,6 +41,8 @@ class RagChatRuntime
 
     public function answerRequest(RagChatRequest $request): RagChatResult
     {
+        $this->telemetry->startTotal();
+
         $rag = $this->rag;
         $rag->resetRuntimeState();
 
@@ -51,7 +58,10 @@ class RagChatRuntime
             $rag->withTopK($request->topK);
         }
 
-        $message = $rag->chat(UserMessage::make($request->question))->getMessage();
+        $message = $this->telemetry->measure(
+            'llm_ms',
+            fn () => $rag->chat(UserMessage::make($request->question))->getMessage()
+        );
         $answer = trim((string) ($message->getContent() ?? ''));
         $sources = array_map(
             static fn ($document, int $index): RagChatSource => RagChatSource::fromNeuronDocument($document, $index + 1),
@@ -59,7 +69,33 @@ class RagChatRuntime
             array_keys($rag->retrievedDocuments()),
         );
 
-        $queryId = $this->queryLogger->log($request, $answer, $sources);
+        $usage = $message->getUsage();
+        $promptTokens = $usage instanceof Usage ? $usage->inputTokens : null;
+        $completionTokens = $usage instanceof Usage ? $usage->outputTokens : null;
+        $totalTokens = $usage instanceof Usage ? $usage->getTotal() : null;
+
+        $this->telemetry->setUsage(new RagQueryUsage(
+            promptTokens: $promptTokens,
+            completionTokens: $completionTokens,
+            totalTokens: $totalTokens,
+            rawUsage: $usage instanceof Usage ? $usage->jsonSerialize() : [],
+        ));
+        $this->telemetry->setEstimatedCost(
+            $this->costEstimator->estimate(
+                model: config('rag.llm.model', 'openrouter/auto'),
+                promptTokens: $promptTokens,
+                completionTokens: $completionTokens,
+            )
+        );
+        $this->telemetry->mergeMetadata([
+            'telemetry_unavailable' => [
+                'rerank_ms' => true,
+                'prompt_build_ms' => true,
+            ],
+        ]);
+        $this->telemetry->finishTotal();
+
+        $queryId = $this->queryLogger->log($request, $answer, $sources, $this->telemetry->toPersistencePayload());
 
         return new RagChatResult(
             answer: $answer,

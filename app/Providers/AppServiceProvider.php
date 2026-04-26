@@ -6,8 +6,11 @@ use App\Domain\Documents\Services\TextExtraction\DocxTextExtractor;
 use App\Domain\Documents\Services\TextExtraction\MarkdownTextExtractor;
 use App\Domain\Documents\Services\TextExtraction\TextExtractorFactory;
 use App\Domain\Rag\PostProcessors\LimitContextPostProcessor;
+use App\Domain\Rag\Services\CostEstimator;
 use App\Domain\Rag\Services\RagChatRuntime;
 use App\Domain\Rag\Services\RagQueryLogger;
+use App\Domain\Rag\Services\Telemetry\RagQueryTelemetry;
+use App\Domain\Rag\Services\Telemetry\TelemetryEmbeddingsProvider;
 use App\Domain\Rag\Support\RagRuntimeConfig;
 use App\Domain\Rag\Support\RetrievedDocumentBuffer;
 use App\Neuron\DocumentRAG;
@@ -34,6 +37,8 @@ class AppServiceProvider extends ServiceProvider
         ]));
 
         $this->app->bind(RetrievedDocumentBuffer::class, static fn (): RetrievedDocumentBuffer => new RetrievedDocumentBuffer());
+        $this->app->bind(RagQueryTelemetry::class, static fn (): RagQueryTelemetry => new RagQueryTelemetry());
+        $this->app->singleton(CostEstimator::class);
 
         $this->app->singleton(EmbeddingsProviderInterface::class, fn ($app): EmbeddingsProviderInterface => $this->makeEmbeddingsProvider(
             $app->make(RagRuntimeConfig::class),
@@ -42,7 +47,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(PgVectorStore::class, function ($app): PgVectorStore {
             $config = $app->make(RagRuntimeConfig::class);
 
-            return new PgVectorStore($config->topK);
+            return new PgVectorStore(
+                defaultTopK: $config->topK,
+                telemetry: $app->make(RagQueryTelemetry::class),
+            );
         });
 
         $this->app->bind(LimitContextPostProcessor::class, function ($app): LimitContextPostProcessor {
@@ -73,7 +81,10 @@ class AppServiceProvider extends ServiceProvider
 
             return new DocumentRAG(
                 runtimeAiProvider: $provider,
-                runtimeEmbeddingsProvider: $this->makeEmbeddingsProvider($config),
+                runtimeEmbeddingsProvider: new TelemetryEmbeddingsProvider(
+                    provider: $this->makeEmbeddingsProvider($config),
+                    telemetry: $app->make(RagQueryTelemetry::class),
+                ),
                 runtimeVectorStore: $app->make(PgVectorStore::class),
                 runtimeRetrievedDocumentBuffer: $app->make(RetrievedDocumentBuffer::class),
                 runtimeLimitContextPostProcessor: $app->make(LimitContextPostProcessor::class),
@@ -84,6 +95,8 @@ class AppServiceProvider extends ServiceProvider
             return new RagChatRuntime(
                 queryLogger: $app->make(RagQueryLogger::class),
                 rag: $app->make(DocumentRAG::class),
+                telemetry: $app->make(RagQueryTelemetry::class),
+                costEstimator: $app->make(CostEstimator::class),
             );
         });
     }
