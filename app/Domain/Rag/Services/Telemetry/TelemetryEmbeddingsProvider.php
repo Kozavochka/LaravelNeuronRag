@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Rag\Services\Telemetry;
 
+use App\Domain\Rag\DTO\RagQueryMetric;
 use NeuronAI\RAG\Document;
 use NeuronAI\RAG\Embeddings\EmbeddingsProviderInterface;
 
@@ -19,7 +20,7 @@ final readonly class TelemetryEmbeddingsProvider implements EmbeddingsProviderIn
     {
         /** @var float[] $embedding */
         $embedding = $this->telemetry->measure(
-            'embedding_ms',
+            RagQueryMetric::EmbeddingMs,
             fn (): array => $this->provider->embedText($text)
         );
 

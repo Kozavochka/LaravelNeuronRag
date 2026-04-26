@@ -7,6 +7,7 @@ namespace App\Domain\Rag\Services;
 use App\Domain\Rag\DTO\RagChatRequest;
 use App\Domain\Rag\DTO\RagChatResult;
 use App\Domain\Rag\DTO\RagChatSource;
+use App\Domain\Rag\DTO\RagQueryMetric;
 use App\Domain\Rag\DTO\RagQueryUsage;
 use App\Domain\Rag\Services\Telemetry\RagQueryTelemetry;
 use App\Neuron\DocumentRAG;
@@ -59,7 +60,7 @@ class RagChatRuntime
         }
 
         $message = $this->telemetry->measure(
-            'llm_ms',
+            RagQueryMetric::LlmMs,
             fn () => $rag->chat(UserMessage::make($request->question))->getMessage()
         );
         $answer = trim((string) ($message->getContent() ?? ''));
@@ -89,8 +90,8 @@ class RagChatRuntime
         );
         $this->telemetry->mergeMetadata([
             'telemetry_unavailable' => [
-                'rerank_ms' => true,
-                'prompt_build_ms' => true,
+                RagQueryMetric::RerankMs->value => true,
+                RagQueryMetric::PromptBuildMs->value => true,
             ],
         ]);
         $this->telemetry->finishTotal();

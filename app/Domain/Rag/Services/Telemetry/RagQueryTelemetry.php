@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Rag\Services\Telemetry;
 
+use App\Domain\Rag\DTO\RagQueryMetric;
 use App\Domain\Rag\DTO\RagQueryTelemetryMetrics;
 use App\Domain\Rag\DTO\RagQueryTelemetryPayload;
 use App\Domain\Rag\DTO\RagQueryUsage;
@@ -15,14 +16,7 @@ final class RagQueryTelemetry
     /**
      * @var array<string, int|null>
      */
-    private array $metrics = [
-        'embedding_ms' => null,
-        'vector_search_ms' => null,
-        'rerank_ms' => null,
-        'prompt_build_ms' => null,
-        'llm_ms' => null,
-        'total_ms' => null,
-    ];
+    private array $metrics = [];
 
     private ?int $promptTokens = null;
 
@@ -42,6 +36,11 @@ final class RagQueryTelemetry
      */
     private array $metadata = [];
 
+    public function __construct()
+    {
+        $this->metrics = RagQueryMetric::defaults();
+    }
+
     public function startTotal(): void
     {
         $this->startedAt = microtime(true);
@@ -50,16 +49,16 @@ final class RagQueryTelemetry
     public function finishTotal(): ?int
     {
         if ($this->startedAt === null) {
-            return $this->metrics['total_ms'];
+            return $this->metrics[RagQueryMetric::TotalMs->value];
         }
 
         $total = (int) round((microtime(true) - $this->startedAt) * 1000);
-        $this->metrics['total_ms'] = $total;
+        $this->metrics[RagQueryMetric::TotalMs->value] = $total;
 
         return $total;
     }
 
-    public function measure(string $metric, callable $callback): mixed
+    public function measure(RagQueryMetric $metric, callable $callback): mixed
     {
         $startedAt = microtime(true);
 
@@ -70,9 +69,9 @@ final class RagQueryTelemetry
         }
     }
 
-    public function putMetric(string $metric, ?int $value): void
+    public function putMetric(RagQueryMetric $metric, ?int $value): void
     {
-        $this->metrics[$metric] = $value;
+        $this->metrics[$metric->value] = $value;
     }
 
     public function setUsage(RagQueryUsage $usage): void
@@ -103,12 +102,12 @@ final class RagQueryTelemetry
     {
         return new RagQueryTelemetryPayload(
             metrics: new RagQueryTelemetryMetrics(
-                embeddingMs: $this->metrics['embedding_ms'],
-                vectorSearchMs: $this->metrics['vector_search_ms'],
-                rerankMs: $this->metrics['rerank_ms'],
-                promptBuildMs: $this->metrics['prompt_build_ms'],
-                llmMs: $this->metrics['llm_ms'],
-                totalMs: $this->metrics['total_ms'],
+                embeddingMs: $this->metrics[RagQueryMetric::EmbeddingMs->value],
+                vectorSearchMs: $this->metrics[RagQueryMetric::VectorSearchMs->value],
+                rerankMs: $this->metrics[RagQueryMetric::RerankMs->value],
+                promptBuildMs: $this->metrics[RagQueryMetric::PromptBuildMs->value],
+                llmMs: $this->metrics[RagQueryMetric::LlmMs->value],
+                totalMs: $this->metrics[RagQueryMetric::TotalMs->value],
             ),
             usage: new RagQueryUsage(
                 promptTokens: $this->promptTokens,

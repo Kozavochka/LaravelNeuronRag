@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Neuron\VectorStore;
 
+use App\Domain\Rag\DTO\RagQueryMetric;
 use App\Domain\Rag\Services\Telemetry\RagQueryTelemetry;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -226,7 +227,7 @@ final class PgVectorStore implements VectorStoreInterface
             LIMIT ' . (int) ($this->filters['top_k'] ?? $this->defaultTopK);
 
         $rows = $this->telemetry?->measure(
-            'vector_search_ms',
+            RagQueryMetric::VectorSearchMs,
             fn (): array => DB::select($sql, $bindings)
         ) ?? DB::select($sql, $bindings);
 
