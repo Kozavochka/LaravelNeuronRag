@@ -41,6 +41,11 @@ return [
         'max_chunks_per_document' => (int) env('RAG_MAX_CHUNKS_PER_DOCUMENT', 500),
         'strip_html_comments' => $toBool(env('RAG_STRIP_HTML_COMMENTS', true), true),
         'preserve_headings' => $toBool(env('RAG_PRESERVE_HEADINGS', true), true),
+        'markdown' => [
+            'section_split_threshold_chars' => (int) env('RAG_MARKDOWN_SECTION_SPLIT_THRESHOLD_CHARS', 3200),
+            'child_chunk_size_chars' => (int) env('RAG_MARKDOWN_CHILD_CHUNK_SIZE_CHARS', 2500),
+            'child_overlap_chars' => (int) env('RAG_MARKDOWN_CHILD_OVERLAP_CHARS', 300),
+        ],
     ],
 
     'retrieval' => [
