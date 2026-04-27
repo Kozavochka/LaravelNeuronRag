@@ -40,7 +40,7 @@
         <table>
             <thead>
             <tr>
-                <th>ID</th><th>Question</th><th>Model</th><th>Latency (ms)</th><th>Tokens</th><th>Cost USD</th><th>Created</th>
+                <th>ID</th><th>Question</th><th>Model</th><th>Latency (ms)</th><th>Tokens</th><th>Cost USD</th><th>Created</th><th>Actions</th>
             </tr>
             </thead>
             <tbody>
@@ -53,9 +53,10 @@
                     <td>{{ $query->total_tokens ?? 'n/a' }}</td>
                     <td>{{ $query->estimated_cost_usd ?? 'n/a' }}</td>
                     <td>{{ $query->created_at }}</td>
+                    <td><a href="{{ route('admin.rag-queries.show', $query) }}">open</a></td>
                 </tr>
             @empty
-                <tr><td colspan="7" class="muted">No queries.</td></tr>
+                <tr><td colspan="8" class="muted">No queries.</td></tr>
             @endforelse
             </tbody>
         </table>

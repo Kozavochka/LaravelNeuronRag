@@ -40,7 +40,7 @@ class AppServiceProvider extends ServiceProvider
         ]));
 
         $this->app->bind(RetrievedDocumentBuffer::class, static fn (): RetrievedDocumentBuffer => new RetrievedDocumentBuffer());
-        $this->app->bind(RagQueryTelemetry::class, static fn (): RagQueryTelemetry => new RagQueryTelemetry());
+        $this->app->singleton(RagQueryTelemetry::class, static fn (): RagQueryTelemetry => new RagQueryTelemetry());
         $this->app->singleton(RerankerInterface::class, static function (): RerankerInterface {
             return new SimpleKeywordReranker(
                 contentWeight: (float) config('rag.retrieval.rerank.content_weight', 0.03),
