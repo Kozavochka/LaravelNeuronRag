@@ -76,24 +76,9 @@ final class MarkdownAwareChunker
         $currentLevel = 0;
         $buffer = [];
 
-        $flush = function () use (&$sections, &$buffer, &$currentPath, &$currentLevel): void {
-            $content = trim(implode("\n", $buffer));
-            $buffer = [];
-
-            if ($content === '') {
-                return;
-            }
-
-            $sections[] = [
-                'content' => $content,
-                'section_path' => $currentPath,
-                'heading_level' => $currentLevel,
-            ];
-        };
-
         foreach ($lines as $line) {
             if (preg_match('/^(#{1,6})[ \t]+(.+?)(?:[ \t]+#+[ \t]*)?$/u', $line, $matches) === 1) {
-                $flush();
+                $this->flushSection($sections, $buffer, $currentPath, $currentLevel);
                 $level = mb_strlen($matches[1]);
                 $title = trim($matches[2]);
 
@@ -112,9 +97,30 @@ final class MarkdownAwareChunker
             $buffer[] = $line;
         }
 
-        $flush();
+        $this->flushSection($sections, $buffer, $currentPath, $currentLevel);
 
         return $sections;
+    }
+
+    /**
+     * @param list<array{content: string, section_path: list<string>, heading_level: int}> $sections
+     * @param list<string> $buffer
+     * @param list<string> $currentPath
+     */
+    private function flushSection(array &$sections, array &$buffer, array $currentPath, int $currentLevel): void
+    {
+        $content = trim(implode("\n", $buffer));
+        $buffer = [];
+
+        if ($content === '') {
+            return;
+        }
+
+        $sections[] = [
+            'content' => $content,
+            'section_path' => $currentPath,
+            'heading_level' => $currentLevel,
+        ];
     }
 
     /**
