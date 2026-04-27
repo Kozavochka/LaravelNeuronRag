@@ -11,9 +11,6 @@ use NeuronAI\Chat\Messages\Message;
 use NeuronAI\RAG\Document;
 use NeuronAI\RAG\PostProcessor\PostProcessorInterface;
 
-use function array_slice;
-use function array_values;
-
 final class RerankPostProcessor implements PostProcessorInterface
 {
     private int $finalTopK;
