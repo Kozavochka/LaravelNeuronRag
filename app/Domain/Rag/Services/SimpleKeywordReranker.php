@@ -21,6 +21,14 @@ use function usort;
 
 final class SimpleKeywordReranker implements RerankerInterface
 {
+    public function __construct(
+        private readonly float $contentWeight = 0.03,
+        private readonly float $headingWeight = 0.05,
+        private readonly float $sectionPathWeight = 0.04,
+        private readonly int $minTokenLen = 2,
+    ) {
+    }
+
     /**
      * @param array<int, Document> $chunks
      * @return array<int, Document>
@@ -43,15 +51,15 @@ final class SimpleKeywordReranker implements RerankerInterface
 
             foreach ($tokens as $token) {
                 if (str_contains($content, $token)) {
-                    $score += 0.03;
+                    $score += $this->contentWeight;
                 }
 
                 if ($heading !== '' && str_contains($heading, $token)) {
-                    $score += 0.05;
+                    $score += $this->headingWeight;
                 }
 
                 if ($sectionPath !== '' && str_contains($sectionPath, $token)) {
-                    $score += 0.04;
+                    $score += $this->sectionPathWeight;
                 }
             }
 
@@ -75,6 +83,7 @@ final class SimpleKeywordReranker implements RerankerInterface
 
         foreach ($chunks as $index => $chunk) {
             $chunk->metadata['rank'] = $index + 1;
+            $chunk->metadata['rank_after_rerank'] = $index + 1;
         }
 
         return array_slice(array_values($chunks), 0, max(1, $limit));
@@ -93,7 +102,7 @@ final class SimpleKeywordReranker implements RerankerInterface
         foreach ($parts as $part) {
             $token = trim($part);
 
-            if ($token === '' || mb_strlen($token) < 2 || in_array($token, $tokens, true)) {
+            if ($token === '' || mb_strlen($token) < $this->minTokenLen || in_array($token, $tokens, true)) {
                 continue;
             }
 
