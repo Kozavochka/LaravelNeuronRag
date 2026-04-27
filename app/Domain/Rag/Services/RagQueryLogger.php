@@ -9,7 +9,6 @@ use App\Domain\Rag\DTO\RagChatSource;
 use App\Domain\Rag\DTO\RagQueryTelemetryPayload;
 use App\Domain\Rag\Support\RagRuntimeConfig;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 final readonly class RagQueryLogger
 {
@@ -28,10 +27,6 @@ final readonly class RagQueryLogger
         ?RagQueryTelemetryPayload $telemetry = null,
     ): ?int
     {
-        if (! Schema::hasTable('rag_queries')) {
-            return null;
-        }
-
         return DB::transaction(function () use ($request, $answer, $sources, $telemetry): ?int {
             $queryId = DB::table('rag_queries')->insertGetId([
                 'user_id' => $request->userId,
@@ -60,6 +55,7 @@ final readonly class RagQueryLogger
                             'document_id' => $source->documentId,
                             'score' => $source->score,
                             'distance' => $source->distance,
+                            'rerank_score' => $source->rerankScore,
                             'rank' => $source->rank,
                         ],
                         $sources
@@ -70,22 +66,21 @@ final readonly class RagQueryLogger
                 'updated_at' => now(),
             ]);
 
-            if (Schema::hasTable('rag_query_chunks')) {
-                foreach ($sources as $source) {
-                    if (! is_numeric($source->chunkId)) {
-                        continue;
-                    }
-
-                    DB::table('rag_query_chunks')->insert([
-                        'rag_query_id' => $queryId,
-                        'document_chunk_id' => (int) $source->chunkId,
-                        'distance' => $source->distance,
-                        'score' => $source->score,
-                        'rank' => $source->rank,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
+            foreach ($sources as $source) {
+                if (! is_numeric($source->chunkId)) {
+                    continue;
                 }
+
+                DB::table('rag_query_chunks')->insert([
+                    'rag_query_id' => $queryId,
+                    'document_chunk_id' => (int) $source->chunkId,
+                    'distance' => $source->distance,
+                    'score' => $source->score,
+                    'rerank_score' => $source->rerankScore,
+                    'rank' => $source->rank,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
             }
 
             return is_numeric($queryId) ? (int) $queryId : null;

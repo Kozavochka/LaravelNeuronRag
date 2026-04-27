@@ -74,6 +74,7 @@ class RagQueryLoggerTest extends TestCase
                     content: 'Neuron is a PHP AI framework.',
                     score: 0.98,
                     distance: 0.02,
+                    rerankScore: 1.12,
                     rank: 1,
                     metadata: ['document_title' => 'Architecture'],
                 ),
@@ -122,6 +123,7 @@ class RagQueryLoggerTest extends TestCase
         $this->assertDatabaseHas('rag_query_chunks', [
             'rag_query_id' => $queryId,
             'document_chunk_id' => $chunkId,
+            'rerank_score' => 1.12,
             'rank' => 1,
         ]);
     }

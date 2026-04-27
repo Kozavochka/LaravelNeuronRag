@@ -6,6 +6,7 @@ namespace App\Neuron;
 
 use App\Domain\Rag\PostProcessors\CaptureRetrievedDocumentsPostProcessor;
 use App\Domain\Rag\PostProcessors\LimitContextPostProcessor;
+use App\Domain\Rag\PostProcessors\RerankPostProcessor;
 use App\Domain\Rag\Support\RetrievedDocumentBuffer;
 use App\Neuron\VectorStore\PgVectorStore;
 use NeuronAI\Providers\AIProviderInterface;
@@ -25,7 +26,10 @@ final class DocumentRAG extends RAG
         private readonly EmbeddingsProviderInterface $runtimeEmbeddingsProvider,
         private readonly PgVectorStore $runtimeVectorStore,
         private readonly RetrievedDocumentBuffer $runtimeRetrievedDocumentBuffer,
+        private readonly RerankPostProcessor $runtimeRerankPostProcessor,
         private readonly LimitContextPostProcessor $runtimeLimitContextPostProcessor,
+        private readonly int $defaultVectorCandidates,
+        private readonly int $defaultRerankTopK,
     ) {
         parent::__construct();
     }
@@ -55,6 +59,7 @@ final class DocumentRAG extends RAG
     public function withTopK(int $topK): self
     {
         $this->filters['top_k'] = max(1, $topK);
+        $this->runtimeRerankPostProcessor->withFinalTopK((int) $this->filters['top_k']);
         $this->setVectorStore($this->vectorStore());
 
         return $this;
@@ -72,6 +77,7 @@ final class DocumentRAG extends RAG
     {
         $this->filters = [];
         $this->runtimeRetrievedDocumentBuffer->clear();
+        $this->runtimeRerankPostProcessor->resetRuntimeState($this->defaultRerankTopK);
         $this->setVectorStore($this->runtimeVectorStore->resetRuntimeState());
 
         return $this;
@@ -89,10 +95,14 @@ final class DocumentRAG extends RAG
 
     protected function vectorStore(): VectorStoreInterface
     {
+        $requestedTopK = isset($this->filters['top_k']) ? max(1, (int) $this->filters['top_k']) : null;
+        $candidateTopK = max($requestedTopK ?? 1, $this->defaultVectorCandidates);
+        $this->runtimeRerankPostProcessor->withFinalTopK($requestedTopK ?? $this->defaultRerankTopK);
+
         return $this->runtimeVectorStore
             ->resetRuntimeState()
             ->withFilters($this->filters)
-            ->withTopK((int) ($this->filters['top_k'] ?? config('rag.retrieval.top_k', 8)));
+            ->withTopK($candidateTopK);
     }
 
     protected function instructions(): string
@@ -110,6 +120,7 @@ final class DocumentRAG extends RAG
     protected function postProcessors(): array
     {
         return [
+            $this->runtimeRerankPostProcessor,
             $this->runtimeLimitContextPostProcessor,
             new CaptureRetrievedDocumentsPostProcessor($this->runtimeRetrievedDocumentBuffer),
         ];

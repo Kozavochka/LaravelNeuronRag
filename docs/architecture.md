@@ -55,7 +55,8 @@ Laravel API
                  |
                  +--> RagChatRuntime
                  +--> DocumentRAG (Neuron)
-                 +--> PgVectorStore
+                 +--> PgVectorStore (vector candidates)
+                 +--> RerankPostProcessor (keyword reranking)
                  +--> OpenRouter LLM
 
 Queue Worker
@@ -205,6 +206,10 @@ Embeddings резолвятся через DI в `AppServiceProvider`.
 - поддерживать soft-deactivate старых чанков по документу;
 - применять фильтрацию по `document_id` и `top_k`.
 
+Текущая retrieval-семантика:
+- vector search запрашивает candidate-набор: `candidate_k = max(requested_top_k, rag.retrieval.vector_candidates)`;
+- финальный размер контекста задаётся после reranking: `final_k = requested_top_k ?? rag.retrieval.rerank_top_k`.
+
 Особенность хранения:
 - embedding строится по enriched text;
 - в колонке `content` сохраняется raw chunk text;
@@ -231,7 +236,11 @@ Embeddings резолвятся через DI в `AppServiceProvider`.
 Ключевые свойства текущей реализации:
 - RAG runtime state reset перед каждым вопросом;
 - поддержка `document_id` filter;
-- поддержка override `top_k`;
+- поддержка override `top_k` как финального размера контекста;
+- двухэтапный retrieval pipeline:
+  - vector retrieval top-N кандидатов (`PgVectorStore`);
+  - keyword-based reranking (`RerankPostProcessor` + `SimpleKeywordReranker`);
+  - ограничение контекста (`LimitContextPostProcessor`);
 - retrieved documents сохраняются в buffer для последующего логирования источников;
 - инструкции заставляют модель отвечать по-русски и не выдумывать факты.
 
@@ -251,7 +260,8 @@ Embeddings резолвятся через DI в `AppServiceProvider`.
 - опционально применяет `document_id`;
 - запускает `DocumentRAG`;
 - преобразует найденные источники в DTO;
-- логирует запрос и связи с чанками.
+- логирует запрос и связи с чанками;
+- сохраняет метрики, включая `rerank_ms`.
 
 Логирование:
 - `rag_queries`
@@ -260,7 +270,7 @@ Embeddings резолвятся через DI в `AppServiceProvider`.
 Это даёт:
 - историю вопросов;
 - трассировку, какие чанки участвовали в ответе;
-- основу для будущих latency/cost metrics.
+- latency/cost metrics на этапах embedding, vector search, rerank, LLM.
 
 ---
 
@@ -312,6 +322,7 @@ Embeddings резолвятся через DI в `AppServiceProvider`.
 - связь между `rag_queries` и `document_chunks`;
 - `distance`;
 - `score`;
+- `rerank_score`;
 - `rank`.
 
 ---

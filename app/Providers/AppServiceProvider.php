@@ -6,9 +6,12 @@ use App\Domain\Documents\Services\TextExtraction\DocxTextExtractor;
 use App\Domain\Documents\Services\TextExtraction\MarkdownTextExtractor;
 use App\Domain\Documents\Services\TextExtraction\TextExtractorFactory;
 use App\Domain\Rag\PostProcessors\LimitContextPostProcessor;
+use App\Domain\Rag\PostProcessors\RerankPostProcessor;
+use App\Domain\Rag\Contracts\RerankerInterface;
 use App\Domain\Rag\Services\CostEstimator;
 use App\Domain\Rag\Services\RagChatRuntime;
 use App\Domain\Rag\Services\RagQueryLogger;
+use App\Domain\Rag\Services\SimpleKeywordReranker;
 use App\Domain\Rag\Services\Telemetry\RagQueryTelemetry;
 use App\Domain\Rag\Services\Telemetry\TelemetryEmbeddingsProvider;
 use App\Domain\Rag\Support\RagRuntimeConfig;
@@ -38,6 +41,7 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->bind(RetrievedDocumentBuffer::class, static fn (): RetrievedDocumentBuffer => new RetrievedDocumentBuffer());
         $this->app->bind(RagQueryTelemetry::class, static fn (): RagQueryTelemetry => new RagQueryTelemetry());
+        $this->app->singleton(RerankerInterface::class, SimpleKeywordReranker::class);
         $this->app->singleton(CostEstimator::class);
 
         $this->app->singleton(EmbeddingsProviderInterface::class, fn ($app): EmbeddingsProviderInterface => $this->makeEmbeddingsProvider(
@@ -57,6 +61,15 @@ class AppServiceProvider extends ServiceProvider
             $config = $app->make(RagRuntimeConfig::class);
 
             return new LimitContextPostProcessor($config->maxContextChars);
+        });
+        $this->app->bind(RerankPostProcessor::class, function ($app): RerankPostProcessor {
+            $config = $app->make(RagRuntimeConfig::class);
+
+            return new RerankPostProcessor(
+                reranker: $app->make(RerankerInterface::class),
+                telemetry: $app->make(RagQueryTelemetry::class),
+                defaultFinalTopK: $config->rerankTopK,
+            );
         });
 
         $this->app->singleton(RagQueryLogger::class);
@@ -87,7 +100,10 @@ class AppServiceProvider extends ServiceProvider
                 ),
                 runtimeVectorStore: $app->make(PgVectorStore::class),
                 runtimeRetrievedDocumentBuffer: $app->make(RetrievedDocumentBuffer::class),
+                runtimeRerankPostProcessor: $app->make(RerankPostProcessor::class),
                 runtimeLimitContextPostProcessor: $app->make(LimitContextPostProcessor::class),
+                defaultVectorCandidates: $config->vectorCandidates,
+                defaultRerankTopK: $config->rerankTopK,
             );
         });
 

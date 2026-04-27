@@ -18,6 +18,8 @@ final readonly class RagRuntimeConfig
         public string $embeddingModel,
         public int $embeddingDimensions,
         public int $topK,
+        public int $vectorCandidates,
+        public int $rerankTopK,
         public int $maxContextChars,
     ) {
     }
@@ -36,6 +38,8 @@ final readonly class RagRuntimeConfig
             embeddingModel: (string) (config('rag.embedding.model') ?? env('RAG_EMBEDDING_MODEL', 'bge-m3')),
             embeddingDimensions: (int) (config('rag.embedding.dimensions') ?? env('RAG_EMBEDDING_DIMENSIONS', 1024)),
             topK: max(1, (int) (config('rag.retrieval.top_k') ?? env('RAG_TOP_K', 8))),
+            vectorCandidates: max(1, (int) (config('rag.retrieval.vector_candidates') ?? env('RAG_VECTOR_CANDIDATES', 30))),
+            rerankTopK: max(1, (int) (config('rag.retrieval.rerank_top_k') ?? env('RAG_RERANK_TOP_K', 5))),
             maxContextChars: max(1, (int) (config('rag.retrieval.max_context_chars') ?? env('RAG_MAX_CONTEXT_CHARS', 16000))),
         );
     }

@@ -90,7 +90,6 @@ class RagChatRuntime
         );
         $this->telemetry->mergeMetadata([
             'telemetry_unavailable' => [
-                RagQueryMetric::RerankMs->value => true,
                 RagQueryMetric::PromptBuildMs->value => true,
             ],
         ]);

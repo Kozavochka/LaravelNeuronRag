@@ -134,6 +134,7 @@ class RagApiTest extends TestCase
                             content: 'Neuron is a PHP AI framework.',
                             score: 0.98,
                             distance: 0.02,
+                            rerankScore: 1.12,
                             rank: 1,
                             metadata: ['document_title' => 'Architecture'],
                         ),
@@ -151,6 +152,7 @@ class RagApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.answer', 'Neuron is a PHP AI framework.')
             ->assertJsonPath('data.query_id', 123)
+            ->assertJsonPath('data.sources.0.rerank_score', 1.12)
             ->assertJsonPath('data.sources.0.document_id', $document->id);
     }
 }
