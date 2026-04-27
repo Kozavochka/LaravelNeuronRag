@@ -18,6 +18,16 @@ class RagQuery extends Model
         'llm_model',
         'embedding_model',
         'top_k',
+        'embedding_ms',
+        'vector_search_ms',
+        'rerank_ms',
+        'prompt_build_ms',
+        'llm_ms',
+        'total_ms',
+        'prompt_tokens',
+        'completion_tokens',
+        'total_tokens',
+        'estimated_cost_usd',
         'metadata',
     ];
 
@@ -25,6 +35,7 @@ class RagQuery extends Model
     {
         return [
             'metadata' => 'array',
+            'estimated_cost_usd' => 'decimal:8',
         ];
     }
 

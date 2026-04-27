@@ -6,6 +6,7 @@ namespace App\Domain\Rag\Services;
 
 use App\Domain\Rag\DTO\RagChatRequest;
 use App\Domain\Rag\DTO\RagChatSource;
+use App\Domain\Rag\DTO\RagQueryTelemetryPayload;
 use App\Domain\Rag\Support\RagRuntimeConfig;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -20,13 +21,18 @@ final readonly class RagQueryLogger
     /**
      * @param RagChatSource[] $sources
      */
-    public function log(RagChatRequest $request, string $answer, array $sources): ?int
+    public function log(
+        RagChatRequest $request,
+        string $answer,
+        array $sources,
+        ?RagQueryTelemetryPayload $telemetry = null,
+    ): ?int
     {
         if (! Schema::hasTable('rag_queries')) {
             return null;
         }
 
-        return DB::transaction(function () use ($request, $answer, $sources): ?int {
+        return DB::transaction(function () use ($request, $answer, $sources, $telemetry): ?int {
             $queryId = DB::table('rag_queries')->insertGetId([
                 'user_id' => $request->userId,
                 'question' => $request->question,
@@ -35,6 +41,16 @@ final readonly class RagQueryLogger
                 'llm_model' => $this->config->openRouterModel,
                 'embedding_model' => $this->config->embeddingModel,
                 'top_k' => count($sources),
+                'embedding_ms' => $telemetry?->metrics->embeddingMs,
+                'vector_search_ms' => $telemetry?->metrics->vectorSearchMs,
+                'rerank_ms' => $telemetry?->metrics->rerankMs,
+                'prompt_build_ms' => $telemetry?->metrics->promptBuildMs,
+                'llm_ms' => $telemetry?->metrics->llmMs,
+                'total_ms' => $telemetry?->metrics->totalMs,
+                'prompt_tokens' => $telemetry?->usage->promptTokens,
+                'completion_tokens' => $telemetry?->usage->completionTokens,
+                'total_tokens' => $telemetry?->usage->totalTokens,
+                'estimated_cost_usd' => $telemetry?->estimatedCostUsd,
                 'metadata' => json_encode([
                     'document_id' => $request->documentId,
                     'filters' => $request->resolvedFilters(),
@@ -48,6 +64,7 @@ final readonly class RagQueryLogger
                         ],
                         $sources
                     ),
+                    ...($telemetry?->metadataForPersistence() ?? []),
                 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 'created_at' => now(),
                 'updated_at' => now(),

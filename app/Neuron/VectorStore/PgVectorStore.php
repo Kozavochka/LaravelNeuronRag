@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Neuron\VectorStore;
 
+use App\Domain\Rag\DTO\RagQueryMetric;
+use App\Domain\Rag\Services\Telemetry\RagQueryTelemetry;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
@@ -41,6 +43,7 @@ final class PgVectorStore implements VectorStoreInterface
 
     public function __construct(
         private readonly int $defaultTopK = 8,
+        private readonly ?RagQueryTelemetry $telemetry = null,
     ) {
     }
 
@@ -223,7 +226,10 @@ final class PgVectorStore implements VectorStoreInterface
             ORDER BY embedding <=> CAST(:query_embedding AS vector)
             LIMIT ' . (int) ($this->filters['top_k'] ?? $this->defaultTopK);
 
-        $rows = DB::select($sql, $bindings);
+        $rows = $this->telemetry?->measure(
+            RagQueryMetric::VectorSearchMs,
+            fn (): array => DB::select($sql, $bindings)
+        ) ?? DB::select($sql, $bindings);
 
         $this->lastResults = array_map(function (object $row, int $index): Document {
             $metadata = $this->decodeMetadata($row->metadata ?? null);
