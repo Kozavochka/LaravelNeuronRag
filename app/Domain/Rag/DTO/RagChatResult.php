@@ -13,6 +13,7 @@ final readonly class RagChatResult
         public string $answer,
         public array $sources,
         public ?int $queryId = null,
+        public ?int $rerankMs = null,
     ) {
     }
 
@@ -25,6 +26,7 @@ final readonly class RagChatResult
                 $this->sources
             ),
             'query_id' => $this->queryId,
+            'rerank_ms' => $this->rerankMs,
         ];
     }
 }

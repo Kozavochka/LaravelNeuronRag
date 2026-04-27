@@ -87,11 +87,23 @@ final class AdminRagQueryController extends Controller
             ->orderBy('rank')
             ->get();
 
+        $apiResponsePreview = [
+            'data' => [
+                'question' => $ragQuery->question,
+                'document_id' => $ragQuery->metadata['document_id'] ?? null,
+                'answer' => $ragQuery->answer,
+                'query_id' => $ragQuery->id,
+                'rerank_ms' => $ragQuery->rerank_ms,
+                'sources' => $ragQuery->metadata['sources'] ?? [],
+            ],
+        ];
+
         return view('admin.rag-queries.show', [
             'query' => $ragQuery,
             'documents' => $documents,
             'sources' => $ragQuery->metadata['sources'] ?? [],
             'queryChunks' => $queryChunks,
+            'apiResponsePreview' => $apiResponsePreview,
         ]);
     }
 }

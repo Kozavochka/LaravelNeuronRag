@@ -86,4 +86,9 @@
             </tbody>
         </table>
     </div>
+
+    <div class="card">
+        <h3>API response preview</h3>
+        <div class="content-pre">{{ json_encode($apiResponsePreview, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}</div>
+    </div>
 @endsection
