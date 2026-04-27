@@ -60,6 +60,7 @@ final readonly class RagQueryLogger
                             'document_id' => $source->documentId,
                             'score' => $source->score,
                             'distance' => $source->distance,
+                            'rerank_score' => $source->rerankScore,
                             'rank' => $source->rank,
                         ],
                         $sources
@@ -71,12 +72,14 @@ final readonly class RagQueryLogger
             ]);
 
             if (Schema::hasTable('rag_query_chunks')) {
+                $hasRerankScore = Schema::hasColumn('rag_query_chunks', 'rerank_score');
+
                 foreach ($sources as $source) {
                     if (! is_numeric($source->chunkId)) {
                         continue;
                     }
 
-                    DB::table('rag_query_chunks')->insert([
+                    $payload = [
                         'rag_query_id' => $queryId,
                         'document_chunk_id' => (int) $source->chunkId,
                         'distance' => $source->distance,
@@ -84,7 +87,13 @@ final readonly class RagQueryLogger
                         'rank' => $source->rank,
                         'created_at' => now(),
                         'updated_at' => now(),
-                    ]);
+                    ];
+
+                    if ($hasRerankScore) {
+                        $payload['rerank_score'] = $source->rerankScore;
+                    }
+
+                    DB::table('rag_query_chunks')->insert($payload);
                 }
             }
 

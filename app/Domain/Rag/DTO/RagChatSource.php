@@ -14,6 +14,7 @@ final readonly class RagChatSource
         public string $content,
         public float $score,
         public ?float $distance,
+        public ?float $rerankScore,
         public int $rank,
         public array $metadata,
     ) {
@@ -31,6 +32,7 @@ final readonly class RagChatSource
             content: $document->getContent(),
             score: (float) $document->getScore(),
             distance: isset($metadata['distance']) ? (float) $metadata['distance'] : null,
+            rerankScore: isset($metadata['rerank_score']) ? (float) $metadata['rerank_score'] : null,
             rank: isset($metadata['rank']) ? (int) $metadata['rank'] : $rank,
             metadata: $metadata,
         );
@@ -44,6 +46,7 @@ final readonly class RagChatSource
             'content' => $this->content,
             'score' => $this->score,
             'distance' => $this->distance,
+            'rerank_score' => $this->rerankScore,
             'rank' => $this->rank,
             'metadata' => $this->metadata,
         ];

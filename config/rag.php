@@ -45,6 +45,8 @@ return [
 
     'retrieval' => [
         'top_k' => (int) env('RAG_TOP_K', 8),
+        'vector_candidates' => (int) env('RAG_VECTOR_CANDIDATES', 30),
+        'rerank_top_k' => (int) env('RAG_RERANK_TOP_K', 5),
         'max_context_chars' => (int) env('RAG_MAX_CONTEXT_CHARS', 16000),
         'min_score' => (float) env('RAG_MIN_SCORE', 0.0),
         'document_filter_enabled' => $toBool(env('RAG_DOCUMENT_FILTER_ENABLED', true), true),
