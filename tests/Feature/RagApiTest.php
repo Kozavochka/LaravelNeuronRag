@@ -140,6 +140,7 @@ class RagApiTest extends TestCase
                         ),
                     ],
                     queryId: 123,
+                    rerankMs: 9,
                 ));
         });
 
@@ -152,6 +153,7 @@ class RagApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.answer', 'Neuron is a PHP AI framework.')
             ->assertJsonPath('data.query_id', 123)
+            ->assertJsonPath('data.rerank_ms', 9)
             ->assertJsonPath('data.sources.0.rerank_score', 1.12)
             ->assertJsonPath('data.sources.0.document_id', $document->id);
     }

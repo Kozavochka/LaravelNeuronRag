@@ -14,7 +14,12 @@ class SimpleKeywordRerankerTest extends TestCase
     #[Test]
     public function it_reranks_chunks_using_heading_and_content_matches(): void
     {
-        $reranker = new SimpleKeywordReranker();
+        $reranker = new SimpleKeywordReranker(
+            contentWeight: 0.03,
+            headingWeight: 0.05,
+            sectionPathWeight: 0.04,
+            minTokenLen: 2,
+        );
 
         $first = new Document('General text about chunking.');
         $first->metadata = [
@@ -43,6 +48,8 @@ class SimpleKeywordRerankerTest extends TestCase
         );
         $this->assertSame(1, $results[0]->metadata['rank']);
         $this->assertSame(2, $results[1]->metadata['rank']);
+        $this->assertSame(1, $results[0]->metadata['rank_after_rerank']);
+        $this->assertSame(2, $results[1]->metadata['rank_after_rerank']);
     }
 
     #[Test]

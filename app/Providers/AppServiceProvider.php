@@ -40,8 +40,15 @@ class AppServiceProvider extends ServiceProvider
         ]));
 
         $this->app->bind(RetrievedDocumentBuffer::class, static fn (): RetrievedDocumentBuffer => new RetrievedDocumentBuffer());
-        $this->app->bind(RagQueryTelemetry::class, static fn (): RagQueryTelemetry => new RagQueryTelemetry());
-        $this->app->singleton(RerankerInterface::class, SimpleKeywordReranker::class);
+        $this->app->singleton(RagQueryTelemetry::class, static fn (): RagQueryTelemetry => new RagQueryTelemetry());
+        $this->app->singleton(RerankerInterface::class, static function (): RerankerInterface {
+            return new SimpleKeywordReranker(
+                contentWeight: (float) config('rag.retrieval.rerank.content_weight', 0.03),
+                headingWeight: (float) config('rag.retrieval.rerank.heading_weight', 0.05),
+                sectionPathWeight: (float) config('rag.retrieval.rerank.section_path_weight', 0.04),
+                minTokenLen: max(1, (int) config('rag.retrieval.rerank.min_token_len', 2)),
+            );
+        });
         $this->app->singleton(CostEstimator::class);
 
         $this->app->singleton(EmbeddingsProviderInterface::class, fn ($app): EmbeddingsProviderInterface => $this->makeEmbeddingsProvider(

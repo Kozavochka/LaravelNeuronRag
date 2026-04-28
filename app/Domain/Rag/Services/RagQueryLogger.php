@@ -57,6 +57,8 @@ final readonly class RagQueryLogger
                             'distance' => $source->distance,
                             'rerank_score' => $source->rerankScore,
                             'rank' => $source->rank,
+                            'vector_rank' => isset($source->metadata['vector_rank']) ? (int) $source->metadata['vector_rank'] : null,
+                            'rank_after_rerank' => isset($source->metadata['rank_after_rerank']) ? (int) $source->metadata['rank_after_rerank'] : $source->rank,
                         ],
                         $sources
                     ),
@@ -77,7 +79,7 @@ final readonly class RagQueryLogger
                     'distance' => $source->distance,
                     'score' => $source->score,
                     'rerank_score' => $source->rerankScore,
-                    'rank' => $source->rank,
+                    'rank' => $source->rank > 0 ? $source->rank : (isset($source->metadata['rank_after_rerank']) ? (int) $source->metadata['rank_after_rerank'] : null),
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);

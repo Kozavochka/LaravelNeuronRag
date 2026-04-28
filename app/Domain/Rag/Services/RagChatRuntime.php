@@ -95,12 +95,14 @@ class RagChatRuntime
         ]);
         $this->telemetry->finishTotal();
 
-        $queryId = $this->queryLogger->log($request, $answer, $sources, $this->telemetry->toPersistencePayload());
+        $telemetryPayload = $this->telemetry->toPersistencePayload();
+        $queryId = $this->queryLogger->log($request, $answer, $sources, $telemetryPayload);
 
         return new RagChatResult(
             answer: $answer,
             sources: $sources,
             queryId: $queryId,
+            rerankMs: $telemetryPayload->metrics->rerankMs,
         );
     }
 }
