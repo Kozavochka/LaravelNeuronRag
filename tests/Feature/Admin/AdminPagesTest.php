@@ -76,6 +76,18 @@ final class AdminPagesTest extends TestCase
 
     public function test_rag_query_show_page_renders(): void
     {
+        $documentId = DB::table('documents')->insertGetId([
+            'title' => 'Architecture',
+            'original_filename' => 'architecture.md',
+            'mime_type' => 'text/markdown',
+            'extension' => 'md',
+            'source_type' => 'upload',
+            'source_path' => 'rag/documents/architecture.md',
+            'status' => 'indexed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
         $queryId = DB::table('rag_queries')->insertGetId([
             'question' => 'What is pgvector?',
             'answer' => 'Vector extension for PostgreSQL.',
@@ -83,16 +95,84 @@ final class AdminPagesTest extends TestCase
             'llm_model' => 'openrouter/auto',
             'embedding_model' => 'bge-m3',
             'top_k' => 2,
+            'keyword_search_ms' => 5,
+            'hybrid_merge_ms' => 2,
             'total_ms' => 120,
             'total_tokens' => 150,
             'estimated_cost_usd' => 0.00050000,
-            'metadata' => json_encode(['document_id' => 1]),
+            'metadata' => json_encode([
+                'document_id' => $documentId,
+                'retrieval' => [
+                    'mode' => 'hybrid',
+                    'resolved_mode' => 'hybrid',
+                    'vector_candidates' => 30,
+                    'keyword_candidates' => 30,
+                    'final_top_k' => 8,
+                    'ts_dictionary' => 'simple',
+                ],
+                'sources' => [
+                    [
+                        'chunk_id' => 1,
+                        'document_id' => $documentId,
+                        'rank' => 1,
+                        'score' => 0.91,
+                        'vector_score' => 0.88,
+                        'keyword_score' => 0.66,
+                        'retrieval_source' => 'hybrid',
+                        'vector_rank' => 1,
+                        'keyword_rank' => 2,
+                    ],
+                ],
+            ]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $versionId = DB::table('document_versions')->insertGetId([
+            'document_id' => $documentId,
+            'version_hash' => str_repeat('c', 64),
+            'raw_text' => 'pgvector hybrid search',
+            'normalized_text' => 'pgvector hybrid search',
+            'status' => 'indexed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $chunkId = DB::table('document_chunks')->insertGetId([
+            'document_id' => $documentId,
+            'document_version_id' => $versionId,
+            'chunk_index' => 0,
+            'content' => 'pgvector hybrid search',
+            'content_hash' => str_repeat('d', 64),
+            'char_count' => 22,
+            'token_estimate' => 3,
+            'metadata' => json_encode(['document_title' => 'Architecture']),
+            'is_active' => true,
+            'embedding' => json_encode([0.1, 0.2]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('rag_query_chunks')->insert([
+            'rag_query_id' => $queryId,
+            'document_chunk_id' => $chunkId,
+            'distance' => 0.02,
+            'score' => 0.91,
+            'vector_score' => 0.88,
+            'keyword_score' => 0.66,
+            'retrieval_source' => 'hybrid',
+            'vector_rank' => 1,
+            'keyword_rank' => 2,
+            'rank' => 1,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
         $this->get('/admin/rag-queries/' . $queryId)
             ->assertOk()
-            ->assertSee('Telemetry');
+            ->assertSee('Telemetry')
+            ->assertSee('retrieval_mode: hybrid')
+            ->assertSee('keyword_score')
+            ->assertSee('hybrid');
     }
 }

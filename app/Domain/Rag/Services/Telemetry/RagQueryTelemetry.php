@@ -104,6 +104,8 @@ final class RagQueryTelemetry
             metrics: new RagQueryTelemetryMetrics(
                 embeddingMs: $this->metrics[RagQueryMetric::EmbeddingMs->value],
                 vectorSearchMs: $this->metrics[RagQueryMetric::VectorSearchMs->value],
+                keywordSearchMs: $this->metrics[RagQueryMetric::KeywordSearchMs->value],
+                hybridMergeMs: $this->metrics[RagQueryMetric::HybridMergeMs->value],
                 rerankMs: $this->metrics[RagQueryMetric::RerankMs->value],
                 promptBuildMs: $this->metrics[RagQueryMetric::PromptBuildMs->value],
                 llmMs: $this->metrics[RagQueryMetric::LlmMs->value],

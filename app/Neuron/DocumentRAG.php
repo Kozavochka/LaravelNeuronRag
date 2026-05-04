@@ -29,6 +29,8 @@ final class DocumentRAG extends RAG
         private readonly RerankPostProcessor $runtimeRerankPostProcessor,
         private readonly LimitContextPostProcessor $runtimeLimitContextPostProcessor,
         private readonly int $defaultVectorCandidates,
+        private readonly int $defaultKeywordCandidates,
+        private readonly string $defaultRetrievalMode,
         private readonly int $defaultRerankTopK,
     ) {
         parent::__construct();
@@ -96,7 +98,12 @@ final class DocumentRAG extends RAG
     protected function vectorStore(): VectorStoreInterface
     {
         $requestedTopK = isset($this->filters['top_k']) ? max(1, (int) $this->filters['top_k']) : null;
-        $candidateTopK = max($requestedTopK ?? 1, $this->defaultVectorCandidates);
+        $retrievalMode = (string) ($this->filters['retrieval_mode'] ?? $this->defaultRetrievalMode);
+        $candidateTopK = max(
+            $requestedTopK ?? 1,
+            $this->defaultVectorCandidates,
+            $retrievalMode === 'hybrid' ? $this->defaultKeywordCandidates : 1,
+        );
         $this->runtimeRerankPostProcessor->withFinalTopK($requestedTopK ?? $this->defaultRerankTopK);
 
         return $this->runtimeVectorStore

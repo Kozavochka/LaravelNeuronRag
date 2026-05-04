@@ -48,6 +48,11 @@ final readonly class RagChatSource
             'distance' => $this->distance,
             'rerank_score' => $this->rerankScore,
             'rank' => $this->rank,
+            'vector_score' => $this->metadata['vector_score'] ?? null,
+            'keyword_score' => $this->metadata['keyword_score'] ?? null,
+            'retrieval_source' => $this->metadata['retrieval_source'] ?? null,
+            'vector_rank' => $this->metadata['vector_rank'] ?? null,
+            'keyword_rank' => $this->metadata['keyword_rank'] ?? null,
             'metadata' => $this->metadata,
         ];
     }
