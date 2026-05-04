@@ -8,6 +8,8 @@ enum RagQueryMetric: string
 {
     case EmbeddingMs = 'embedding_ms';
     case VectorSearchMs = 'vector_search_ms';
+    case KeywordSearchMs = 'keyword_search_ms';
+    case HybridMergeMs = 'hybrid_merge_ms';
     case RerankMs = 'rerank_ms';
     case PromptBuildMs = 'prompt_build_ms';
     case LlmMs = 'llm_ms';

@@ -20,6 +20,8 @@ class RagQuery extends Model
         'top_k',
         'embedding_ms',
         'vector_search_ms',
+        'keyword_search_ms',
+        'hybrid_merge_ms',
         'rerank_ms',
         'prompt_build_ms',
         'llm_ms',

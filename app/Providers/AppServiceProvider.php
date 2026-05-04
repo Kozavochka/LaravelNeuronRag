@@ -60,6 +60,12 @@ class AppServiceProvider extends ServiceProvider
 
             return new PgVectorStore(
                 defaultTopK: $config->topK,
+                defaultRetrievalMode: $config->retrievalMode,
+                defaultVectorCandidates: $config->vectorCandidates,
+                defaultKeywordCandidates: $config->keywordCandidates,
+                vectorWeight: $config->vectorWeight,
+                keywordWeight: $config->keywordWeight,
+                tsDictionary: $config->tsDictionary,
                 telemetry: $app->make(RagQueryTelemetry::class),
             );
         });
@@ -110,7 +116,9 @@ class AppServiceProvider extends ServiceProvider
                 runtimeRerankPostProcessor: $app->make(RerankPostProcessor::class),
                 runtimeLimitContextPostProcessor: $app->make(LimitContextPostProcessor::class),
                 defaultVectorCandidates: $config->vectorCandidates,
-                defaultRerankTopK: $config->rerankTopK,
+                defaultKeywordCandidates: $config->keywordCandidates,
+                defaultRetrievalMode: $config->retrievalMode,
+                defaultRerankTopK: $config->finalTopK,
             );
         });
 

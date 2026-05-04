@@ -11,6 +11,7 @@ final readonly class RagChatRequest
         public ?int $documentId = null,
         public ?int $userId = null,
         public ?int $topK = null,
+        public ?string $retrievalMode = null,
         public array $filters = [],
     ) {
     }
@@ -21,6 +22,7 @@ final readonly class RagChatRequest
             [
                 ...$this->filters,
                 'document_id' => $this->documentId,
+                'retrieval_mode' => $this->retrievalMode,
             ],
             static fn (mixed $value): bool => $value !== null
         );

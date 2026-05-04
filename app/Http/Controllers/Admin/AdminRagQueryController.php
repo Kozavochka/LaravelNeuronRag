@@ -91,6 +91,7 @@ final class AdminRagQueryController extends Controller
             'data' => [
                 'question' => $ragQuery->question,
                 'document_id' => $ragQuery->metadata['document_id'] ?? null,
+                'retrieval_mode' => $ragQuery->metadata['retrieval']['resolved_mode'] ?? $ragQuery->metadata['retrieval']['mode'] ?? null,
                 'answer' => $ragQuery->answer,
                 'query_id' => $ragQuery->id,
                 'rerank_ms' => $ragQuery->rerank_ms,

@@ -15,6 +15,11 @@ class RagQueryChunk extends Model
         'distance',
         'score',
         'rerank_score',
+        'vector_score',
+        'keyword_score',
+        'retrieval_source',
+        'vector_rank',
+        'keyword_rank',
         'rank',
     ];
 
