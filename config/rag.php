@@ -49,9 +49,17 @@ return [
     ],
 
     'retrieval' => [
+        'mode' => env('RAG_RETRIEVAL_MODE', 'hybrid'),
         'top_k' => (int) env('RAG_TOP_K', 8),
         'vector_candidates' => (int) env('RAG_VECTOR_CANDIDATES', 30),
+        'keyword_candidates' => (int) env('RAG_KEYWORD_CANDIDATES', 30),
+        'final_top_k' => (int) env('RAG_FINAL_TOP_K', env('RAG_RERANK_TOP_K', 5)),
         'rerank_top_k' => (int) env('RAG_RERANK_TOP_K', 5),
+        'weights' => [
+            'vector' => (float) env('RAG_VECTOR_WEIGHT', 0.7),
+            'keyword' => (float) env('RAG_KEYWORD_WEIGHT', 0.3),
+        ],
+        'ts_dictionary' => env('RAG_TS_DICTIONARY', 'simple'),
         'rerank' => [
             'content_weight' => (float) env('RAG_RERANK_CONTENT_WEIGHT', 0.03),
             'heading_weight' => (float) env('RAG_RERANK_HEADING_WEIGHT', 0.05),

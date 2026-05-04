@@ -30,12 +30,14 @@ class RagChatRuntime
         ?int $userId = null,
         array $filters = [],
         ?int $topK = null,
+        ?string $retrievalMode = null,
     ): RagChatResult {
         return $this->answerRequest(new RagChatRequest(
             question: $question,
             documentId: $documentId,
             userId: $userId,
             topK: $topK,
+            retrievalMode: $retrievalMode,
             filters: $filters,
         ));
     }
@@ -51,8 +53,15 @@ class RagChatRuntime
             $rag->forDocument($request->documentId);
         }
 
-        if ($request->filters !== []) {
-            $rag->withFilters($request->filters);
+        $runtimeFilters = $request->filters;
+        $runtimeFilters['query'] = $request->question;
+
+        if ($request->retrievalMode !== null) {
+            $runtimeFilters['retrieval_mode'] = $request->retrievalMode;
+        }
+
+        if ($runtimeFilters !== []) {
+            $rag->withFilters($runtimeFilters);
         }
 
         if ($request->topK !== null) {

@@ -16,6 +16,7 @@
             <p><strong>Answer</strong></p>
             <div class="content-pre">{{ $query->answer ?? 'n/a' }}</div>
             <p class="muted">document_id filter: {{ $query->metadata['document_id'] ?? 'none' }}</p>
+            <p class="muted">retrieval_mode: {{ $query->metadata['retrieval']['resolved_mode'] ?? $query->metadata['retrieval']['mode'] ?? 'n/a' }}</p>
         </div>
 
         <div class="card">
@@ -25,6 +26,8 @@
                 <tr><th>top_k</th><td>{{ $query->top_k ?? 'n/a' }}</td></tr>
                 <tr><th>embedding_ms</th><td>{{ $query->embedding_ms ?? 'n/a' }}</td></tr>
                 <tr><th>vector_search_ms</th><td>{{ $query->vector_search_ms ?? 'n/a' }}</td></tr>
+                <tr><th>keyword_search_ms</th><td>{{ $query->keyword_search_ms ?? 'n/a' }}</td></tr>
+                <tr><th>hybrid_merge_ms</th><td>{{ $query->hybrid_merge_ms ?? 'n/a' }}</td></tr>
                 <tr><th>rerank_ms</th><td>{{ $query->rerank_ms ?? 'n/a' }}</td></tr>
                 <tr><th>prompt_build_ms</th><td>{{ $query->prompt_build_ms ?? 'n/a' }}</td></tr>
                 <tr><th>llm_ms</th><td>{{ $query->llm_ms ?? 'n/a' }}</td></tr>
@@ -33,6 +36,10 @@
                 <tr><th>completion_tokens</th><td>{{ $query->completion_tokens ?? 'n/a' }}</td></tr>
                 <tr><th>total_tokens</th><td>{{ $query->total_tokens ?? 'n/a' }}</td></tr>
                 <tr><th>estimated_cost_usd</th><td>{{ $query->estimated_cost_usd ?? 'n/a' }}</td></tr>
+                <tr><th>vector_candidates</th><td>{{ $query->metadata['retrieval']['vector_candidates'] ?? 'n/a' }}</td></tr>
+                <tr><th>keyword_candidates</th><td>{{ $query->metadata['retrieval']['keyword_candidates'] ?? 'n/a' }}</td></tr>
+                <tr><th>final_top_k</th><td>{{ $query->metadata['retrieval']['final_top_k'] ?? 'n/a' }}</td></tr>
+                <tr><th>ts_dictionary</th><td>{{ $query->metadata['retrieval']['ts_dictionary'] ?? 'n/a' }}</td></tr>
                 </tbody>
             </table>
         </div>
@@ -41,7 +48,7 @@
     <div class="card">
         <h3>Retrieved sources</h3>
         <table>
-            <thead><tr><th>rank</th><th>chunk_id</th><th>document</th><th>distance</th><th>score</th><th>rerank_score</th><th>vector_rank</th><th>rank_after_rerank</th></tr></thead>
+            <thead><tr><th>rank</th><th>chunk_id</th><th>document</th><th>distance</th><th>score</th><th>vector_score</th><th>keyword_score</th><th>source</th><th>rerank_score</th><th>vector_rank</th><th>keyword_rank</th><th>rank_after_rerank</th></tr></thead>
             <tbody>
             @forelse ($sources as $source)
                 <tr>
@@ -56,12 +63,16 @@
                     </td>
                     <td>{{ $source['distance'] ?? 'n/a' }}</td>
                     <td>{{ $source['score'] ?? 'n/a' }}</td>
+                    <td>{{ $source['vector_score'] ?? 'n/a' }}</td>
+                    <td>{{ $source['keyword_score'] ?? 'n/a' }}</td>
+                    <td>{{ $source['retrieval_source'] ?? 'n/a' }}</td>
                     <td>{{ $source['rerank_score'] ?? 'n/a' }}</td>
                     <td>{{ $source['vector_rank'] ?? 'n/a' }}</td>
+                    <td>{{ $source['keyword_rank'] ?? 'n/a' }}</td>
                     <td>{{ $source['rank_after_rerank'] ?? 'n/a' }}</td>
                 </tr>
             @empty
-                <tr><td colspan="8" class="muted">No source entries in metadata.</td></tr>
+                <tr><td colspan="12" class="muted">No source entries in metadata.</td></tr>
             @endforelse
             </tbody>
         </table>
@@ -70,7 +81,7 @@
     <div class="card">
         <h3>rag_query_chunks rows</h3>
         <table>
-            <thead><tr><th>rank</th><th>chunk_id</th><th>distance</th><th>score</th><th>rerank_score</th></tr></thead>
+            <thead><tr><th>rank</th><th>chunk_id</th><th>distance</th><th>score</th><th>vector_score</th><th>keyword_score</th><th>source</th><th>vector_rank</th><th>keyword_rank</th><th>rerank_score</th></tr></thead>
             <tbody>
             @forelse ($queryChunks as $row)
                 <tr>
@@ -78,10 +89,15 @@
                     <td>{{ $row->document_chunk_id }}</td>
                     <td>{{ $row->distance ?? 'n/a' }}</td>
                     <td>{{ $row->score ?? 'n/a' }}</td>
+                    <td>{{ $row->vector_score ?? 'n/a' }}</td>
+                    <td>{{ $row->keyword_score ?? 'n/a' }}</td>
+                    <td>{{ $row->retrieval_source ?? 'n/a' }}</td>
+                    <td>{{ $row->vector_rank ?? 'n/a' }}</td>
+                    <td>{{ $row->keyword_rank ?? 'n/a' }}</td>
                     <td>{{ $row->rerank_score ?? 'n/a' }}</td>
                 </tr>
             @empty
-                <tr><td colspan="5" class="muted">No persisted chunk links.</td></tr>
+                <tr><td colspan="10" class="muted">No persisted chunk links.</td></tr>
             @endforelse
             </tbody>
         </table>

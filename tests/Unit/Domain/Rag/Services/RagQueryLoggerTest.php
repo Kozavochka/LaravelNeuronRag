@@ -76,13 +76,22 @@ class RagQueryLoggerTest extends TestCase
                     distance: 0.02,
                     rerankScore: 1.12,
                     rank: 1,
-                    metadata: ['document_title' => 'Architecture'],
+                    metadata: [
+                        'document_title' => 'Architecture',
+                        'vector_score' => 0.98,
+                        'keyword_score' => 0.55,
+                        'retrieval_source' => 'hybrid',
+                        'vector_rank' => 1,
+                        'keyword_rank' => 2,
+                    ],
                 ),
             ],
             telemetry: new RagQueryTelemetryPayload(
                 metrics: new RagQueryTelemetryMetrics(
                     embeddingMs: 12,
                     vectorSearchMs: 8,
+                    keywordSearchMs: 5,
+                    hybridMergeMs: 2,
                     llmMs: 150,
                     totalMs: 190,
                 ),
@@ -97,6 +106,18 @@ class RagQueryLoggerTest extends TestCase
                 ),
                 estimatedCostUsd: '0.00050000',
                 metadata: [
+                    'retrieval' => [
+                        'mode' => 'hybrid',
+                        'resolved_mode' => 'hybrid',
+                        'vector_candidates' => 30,
+                        'keyword_candidates' => 30,
+                        'final_top_k' => 8,
+                        'weights' => [
+                            'vector' => 0.7,
+                            'keyword' => 0.3,
+                        ],
+                        'ts_dictionary' => 'simple',
+                    ],
                     'raw_usage' => [
                         'input_tokens' => 100,
                         'output_tokens' => 50,
@@ -112,6 +133,8 @@ class RagQueryLoggerTest extends TestCase
             'question' => 'What is Neuron?',
             'embedding_ms' => 12,
             'vector_search_ms' => 8,
+            'keyword_search_ms' => 5,
+            'hybrid_merge_ms' => 2,
             'llm_ms' => 150,
             'total_ms' => 190,
             'prompt_tokens' => 100,
@@ -124,6 +147,11 @@ class RagQueryLoggerTest extends TestCase
             'rag_query_id' => $queryId,
             'document_chunk_id' => $chunkId,
             'rerank_score' => 1.12,
+            'vector_score' => 0.98,
+            'keyword_score' => 0.55,
+            'retrieval_source' => 'hybrid',
+            'vector_rank' => 1,
+            'keyword_rank' => 2,
             'rank' => 1,
         ]);
     }

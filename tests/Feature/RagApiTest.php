@@ -125,6 +125,14 @@ class RagApiTest extends TestCase
         $this->mock(RagChatRuntime::class, function ($mock) use ($document): void {
             $mock->shouldReceive('answer')
                 ->once()
+                ->withArgs(function (string $question, ?int $documentId, ?int $userId, array $filters, ?int $topK, ?string $retrievalMode) use ($document): bool {
+                    return $question === 'What is Neuron?'
+                        && $documentId === $document->id
+                        && $userId === null
+                        && $filters === []
+                        && $topK === null
+                        && $retrievalMode === 'hybrid';
+                })
                 ->andReturn(new RagChatResult(
                     answer: 'Neuron is a PHP AI framework.',
                     sources: [
@@ -147,6 +155,7 @@ class RagApiTest extends TestCase
         $response = $this->postJson('/api/rag/chat', [
             'question' => 'What is Neuron?',
             'document_id' => $document->id,
+            'retrieval_mode' => 'hybrid',
         ]);
 
         $response
@@ -154,7 +163,20 @@ class RagApiTest extends TestCase
             ->assertJsonPath('data.answer', 'Neuron is a PHP AI framework.')
             ->assertJsonPath('data.query_id', 123)
             ->assertJsonPath('data.rerank_ms', 9)
+            ->assertJsonPath('data.retrieval_mode', 'hybrid')
             ->assertJsonPath('data.sources.0.rerank_score', 1.12)
             ->assertJsonPath('data.sources.0.document_id', $document->id);
+    }
+
+    public function test_chat_endpoint_validates_retrieval_mode(): void
+    {
+        $response = $this->postJson('/api/rag/chat', [
+            'question' => 'What is Neuron?',
+            'retrieval_mode' => 'broken',
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['retrieval_mode']);
     }
 }
