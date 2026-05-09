@@ -15,7 +15,8 @@ Core stack:
 - Queue-backed document indexing
 
 The current implementation is centered on:
-- upload `.md` and `.docx` documents
+- upload base `.md` and `.docx` documents
+- optional upload of markitdown-supported formats (`pdf`, `xlsx`, `xls`, `html`, `htm`, `jpg`, `jpeg`, `png`, `webp`) when markitdown `/health` is available
 - extract and chunk text
 - embed chunks
 - store vectors in PostgreSQL
@@ -29,6 +30,7 @@ Primary HTTP routes live in `routes/api.php`:
 - `GET /api/rag/documents/{document}`
 - `POST /api/rag/documents/{document}/reindex`
 - `POST /api/rag/chat`
+- `GET /api/rag/capabilities`
 
 Primary runtime entrypoints:
 - `app/Http/Controllers/Rag/DocumentController.php`
@@ -90,6 +92,7 @@ Important env variables:
 Current supported document extensions:
 - `md`
 - `docx`
+- plus dynamic markitdown extensions when markitdown is healthy (see `config/rag.php`)
 
 Upload validation is extension-based, not mime-type based. This was changed because Postman often sends unstable content types for `.md` uploads.
 

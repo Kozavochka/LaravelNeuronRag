@@ -10,7 +10,7 @@ LaravelNeuronRag — учебно-практический Laravel-проект,
 
 Проект реализует полный цикл работы с документами:
 
-1. Загрузка `.md` и `.docx` документов через API или админку.
+1. Загрузка документов через API или админку: базово `.md/.docx`, и расширенные форматы через внешний `markitdown` (`pdf`, `xlsx`, `xls`, `html`, `htm`, `jpg`, `jpeg`, `png`, `webp`) при доступном `/health`.
 2. Сохранение исходного файла в Laravel Storage.
 3. Постановка документа в очередь на индексацию.
 4. Извлечение текста из Markdown или DOCX.
@@ -45,8 +45,8 @@ LaravelNeuronRag — учебно-практический Laravel-проект,
 
 Проект имеет два основных интерфейса:
 
-- **Admin UI** — страницы `/admin`, `/admin/documents`, `/admin/rag-queries`.
-- **JSON API** — маршруты `/api/rag/documents` и `/api/rag/chat`.
+- **Admin UI** — страницы `/admin`, `/admin/documents`, `/admin/rag-queries`, `/admin/integrations/markitdown`.
+- **JSON API** — маршруты `/api/rag/documents`, `/api/rag/chat`, `/api/rag/capabilities`.
 
 Основные API endpoints:
 
@@ -57,6 +57,7 @@ LaravelNeuronRag — учебно-практический Laravel-проект,
 | `GET` | `/api/rag/documents/{id}` | получить информацию о документе |
 | `POST` | `/api/rag/documents/{id}/reindex` | поставить документ на переиндексацию |
 | `POST` | `/api/rag/chat` | задать вопрос к базе документов |
+| `GET` | `/api/rag/capabilities` | текущие доступные расширения и health markitdown |
 
 ### 2. Индексация документов
 
