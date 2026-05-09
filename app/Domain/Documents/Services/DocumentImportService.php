@@ -18,9 +18,9 @@ final class DocumentImportService
     public function import(UploadedFile $file): Document
     {
         $extension = mb_strtolower($file->getClientOriginalExtension());
-        $allowed = $this->capabilities->allowedExtensions();
 
-        if (! in_array($extension, $allowed, true)) {
+        if (! $this->capabilities->isExtensionAllowed($extension)) {
+            $allowed = $this->capabilities->allowedExtensions();
             throw new InvalidArgumentException('The file field must be a file of type: ' . implode(', ', $allowed) . '.');
         }
 

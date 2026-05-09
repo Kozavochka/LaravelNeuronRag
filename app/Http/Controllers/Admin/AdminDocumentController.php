@@ -87,9 +87,10 @@ final class AdminDocumentController extends Controller
                     }
 
                     $extension = mb_strtolower($value->getClientOriginalExtension());
-                    $allowed = app(DocumentUploadCapabilitiesService::class)->allowedExtensions();
+                    $capabilities = app(DocumentUploadCapabilitiesService::class);
 
-                    if (! in_array($extension, $allowed, true)) {
+                    if (! $capabilities->isExtensionAllowed($extension)) {
+                        $allowed = $capabilities->allowedExtensions();
                         $fail('The file field must be a file of type: ' . implode(', ', $allowed) . '.');
                     }
                 },

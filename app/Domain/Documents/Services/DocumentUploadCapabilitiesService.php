@@ -29,6 +29,27 @@ final class DocumentUploadCapabilitiesService
         return $base;
     }
 
+    public function isExtensionAllowed(string $extension): bool
+    {
+        $extension = mb_strtolower(trim($extension));
+
+        if ($extension === '') {
+            return false;
+        }
+
+        $base = $this->baseExtensions();
+        if (in_array($extension, $base, true)) {
+            return true;
+        }
+
+        $extended = $this->extendedExtensions();
+        if (! in_array($extension, $extended, true)) {
+            return false;
+        }
+
+        return $this->health()->isAvailable;
+    }
+
     /**
      * @return list<string>
      */
