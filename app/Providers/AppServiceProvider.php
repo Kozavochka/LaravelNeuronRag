@@ -3,6 +3,9 @@
 namespace App\Providers;
 
 use App\Domain\Documents\Services\TextExtraction\DocxTextExtractor;
+use App\Domain\Documents\Contracts\MarkitdownClientInterface;
+use App\Domain\Documents\Services\Diagnostics\IntegrationEventLogger;
+use App\Domain\Documents\Services\Markitdown\MarkitdownHttpClient;
 use App\Domain\Documents\Services\TextExtraction\MarkdownTextExtractor;
 use App\Domain\Documents\Services\TextExtraction\TextExtractorFactory;
 use App\Domain\Rag\PostProcessors\LimitContextPostProcessor;
@@ -32,6 +35,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->singleton(IntegrationEventLogger::class);
+        $this->app->singleton(MarkitdownClientInterface::class, fn ($app): MarkitdownClientInterface => new MarkitdownHttpClient(
+            eventLogger: $app->make(IntegrationEventLogger::class),
+        ));
+
         $this->app->singleton(RagRuntimeConfig::class, static fn (): RagRuntimeConfig => RagRuntimeConfig::fromConfig());
 
         $this->app->singleton(TextExtractorFactory::class, static fn (): TextExtractorFactory => new TextExtractorFactory([

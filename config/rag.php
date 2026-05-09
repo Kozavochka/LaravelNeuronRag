@@ -16,6 +16,18 @@ return [
         'max_upload_kb' => (int) env('RAG_MAX_UPLOAD_KB', 10240),
     ],
 
+    'markitdown' => [
+        'enabled' => $toBool(env('RAG_MARKITDOWN_ENABLED', true), true),
+        'base_url' => env('RAG_MARKITDOWN_BASE_URL', 'http://localhost'),
+        'port' => (int) env('RAG_MARKITDOWN_PORT', 8123),
+        'timeout_seconds' => (int) env('RAG_MARKITDOWN_TIMEOUT', 30),
+        'health_ttl_seconds' => (int) env('RAG_MARKITDOWN_HEALTH_TTL', 30),
+        'extended_extensions' => array_values(array_filter(array_map(
+            static fn (string $value): string => mb_strtolower(trim($value)),
+            explode(',', (string) env('RAG_MARKITDOWN_EXTENSIONS', 'pdf,xlsx,xls,html,htm,jpg,jpeg,png,webp'))
+        ), static fn (string $value): bool => $value !== '')),
+    ],
+
     'embedding' => [
         'provider' => env('RAG_EMBEDDING_PROVIDER', 'ollama'),
         'model' => env('RAG_EMBEDDING_MODEL', 'bge-m3'),

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Unit\Domain\Documents\Services\Indexing;
 
 use App\Domain\Documents\DTO\PreparedChunk;
+use App\Domain\Documents\DTO\MarkitdownHealthResult;
+use App\Domain\Documents\Contracts\MarkitdownClientInterface;
 use App\Domain\Documents\Services\Indexing\DocumentIndexingService;
 use App\Domain\Documents\Services\TextExtraction\TextExtractorFactory;
 use App\Domain\Documents\Services\TextProcessing\ChunkFilter;
@@ -32,6 +34,7 @@ class DocumentIndexingServiceTest extends TestCase
             chunkFilter: new ChunkFilter(),
             embeddings: $this->createMock(EmbeddingsProviderInterface::class),
             vectorStore: new PgVectorStore(telemetry: new RagQueryTelemetry()),
+            markitdown: $this->createMock(MarkitdownClientInterface::class),
         );
 
         $document = new Document();
@@ -63,5 +66,58 @@ class DocumentIndexingServiceTest extends TestCase
         self::assertSame('Raw chunk body', $result[0]->metadata['raw_content']);
         self::assertSame('RAG / Chunking', $result[0]->metadata['section_path']);
         self::assertSame($result[0]->content, $result[0]->metadata['embedding_text']);
+    }
+
+    public function test_it_uses_markitdown_for_docx_when_service_is_available(): void
+    {
+        $markitdown = $this->createMock(MarkitdownClientInterface::class);
+        $markitdown->method('health')->willReturn(new MarkitdownHealthResult(
+            isAvailable: true,
+            status: 'ok',
+        ));
+
+        $service = new DocumentIndexingService(
+            extractorFactory: new TextExtractorFactory([]),
+            sanitizer: new RagTextSanitizer(),
+            recursiveChunker: new RecursiveTextChunker(),
+            markdownChunker: new MarkdownAwareChunker(),
+            metadataEnricher: new ChunkMetadataEnricher(),
+            chunkFilter: new ChunkFilter(),
+            embeddings: $this->createMock(EmbeddingsProviderInterface::class),
+            vectorStore: new PgVectorStore(telemetry: new RagQueryTelemetry()),
+            markitdown: $markitdown,
+        );
+
+        $method = new \ReflectionMethod($service, 'shouldConvertWithMarkitdown');
+        $method->setAccessible(true);
+
+        self::assertTrue($method->invoke($service, 'docx'));
+    }
+
+    public function test_it_falls_back_to_local_extractor_for_docx_when_service_is_unavailable(): void
+    {
+        $markitdown = $this->createMock(MarkitdownClientInterface::class);
+        $markitdown->method('health')->willReturn(new MarkitdownHealthResult(
+            isAvailable: false,
+            status: 'down',
+        ));
+
+        $service = new DocumentIndexingService(
+            extractorFactory: new TextExtractorFactory([]),
+            sanitizer: new RagTextSanitizer(),
+            recursiveChunker: new RecursiveTextChunker(),
+            markdownChunker: new MarkdownAwareChunker(),
+            metadataEnricher: new ChunkMetadataEnricher(),
+            chunkFilter: new ChunkFilter(),
+            embeddings: $this->createMock(EmbeddingsProviderInterface::class),
+            vectorStore: new PgVectorStore(telemetry: new RagQueryTelemetry()),
+            markitdown: $markitdown,
+        );
+
+        $method = new \ReflectionMethod($service, 'shouldConvertWithMarkitdown');
+        $method->setAccessible(true);
+
+        self::assertFalse($method->invoke($service, 'docx'));
+        self::assertFalse($method->invoke($service, 'md'));
     }
 }

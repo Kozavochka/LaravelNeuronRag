@@ -10,13 +10,18 @@ use InvalidArgumentException;
 
 final class DocumentImportService
 {
+    public function __construct(
+        private readonly DocumentUploadCapabilitiesService $capabilities,
+    ) {
+    }
+
     public function import(UploadedFile $file): Document
     {
         $extension = mb_strtolower($file->getClientOriginalExtension());
-        $allowed = config('rag.documents.allowed_extensions', ['md', 'docx']);
+        $allowed = $this->capabilities->allowedExtensions();
 
         if (! in_array($extension, $allowed, true)) {
-            throw new InvalidArgumentException('Only .md and .docx files are supported.');
+            throw new InvalidArgumentException('The file field must be a file of type: ' . implode(', ', $allowed) . '.');
         }
 
         $path = $file->store(
