@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Domain\Documents\Jobs\ProcessDocumentJob;
 use App\Domain\Documents\Services\DocumentImportService;
+use App\Domain\Documents\Services\DocumentUploadCapabilitiesService;
 use App\Http\Controllers\Controller;
 use App\Models\Document;
 use Illuminate\Database\Eloquent\Builder;
@@ -63,7 +64,12 @@ final class AdminDocumentController extends Controller
 
     public function create(): View
     {
-        return view('admin.documents.create');
+        $capabilities = app(DocumentUploadCapabilitiesService::class);
+
+        return view('admin.documents.create', [
+            'markitdownHealth' => $capabilities->health(),
+            'allowedExtensions' => $capabilities->allowedExtensions(),
+        ]);
     }
 
     public function store(Request $request, DocumentImportService $importService): RedirectResponse
@@ -73,7 +79,7 @@ final class AdminDocumentController extends Controller
                 'required',
                 'file',
                 'max:' . config('rag.documents.max_upload_kb'),
-                static function (string $attribute, mixed $value, \Closure $fail): void {
+                function (string $attribute, mixed $value, \Closure $fail): void {
                     if (! $value instanceof UploadedFile) {
                         $fail('The file field must contain an uploaded file.');
 
@@ -81,7 +87,7 @@ final class AdminDocumentController extends Controller
                     }
 
                     $extension = mb_strtolower($value->getClientOriginalExtension());
-                    $allowed = config('rag.documents.allowed_extensions', ['md', 'docx']);
+                    $allowed = app(DocumentUploadCapabilitiesService::class)->allowedExtensions();
 
                     if (! in_array($extension, $allowed, true)) {
                         $fail('The file field must be a file of type: ' . implode(', ', $allowed) . '.');

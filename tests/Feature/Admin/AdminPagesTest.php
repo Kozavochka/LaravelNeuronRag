@@ -4,13 +4,22 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Admin;
 
+use App\Domain\Documents\Contracts\MarkitdownClientInterface;
+use App\Domain\Documents\DTO\MarkitdownHealthResult;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 final class AdminPagesTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Cache::forget('rag:markitdown:health');
+    }
 
     public function test_dashboard_renders(): void
     {
@@ -174,5 +183,32 @@ final class AdminPagesTest extends TestCase
             ->assertSee('retrieval_mode: hybrid')
             ->assertSee('keyword_score')
             ->assertSee('hybrid');
+    }
+
+    public function test_markitdown_integration_page_renders(): void
+    {
+        $this->mock(MarkitdownClientInterface::class, function ($mock): void {
+            $mock->shouldReceive('health')
+                ->andReturn(new MarkitdownHealthResult(
+                    isAvailable: true,
+                    status: 'ok',
+                ));
+        });
+
+        DB::table('integration_events')->insert([
+            'integration' => 'markitdown',
+            'event_type' => 'health',
+            'status_code' => 200,
+            'latency_ms' => 12,
+            'message' => 'Markitdown health check passed.',
+            'context' => json_encode(['status' => 'ok']),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->get('/admin/integrations/markitdown')
+            ->assertOk()
+            ->assertSee('MarkItDown')
+            ->assertSee('Recent events');
     }
 }

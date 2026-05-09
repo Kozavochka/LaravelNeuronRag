@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Rag\ChatController;
+use App\Http\Controllers\Rag\CapabilitiesController;
 use App\Http\Controllers\Rag\DocumentController;
 use Illuminate\Support\Facades\Route;
 
@@ -17,4 +18,5 @@ Route::prefix('rag')->group(function (): void {
         ->name('rag.documents.reindex');
 
     Route::post('chat', [ChatController::class, 'store'])->name('rag.chat.store');
+    Route::get('capabilities', CapabilitiesController::class)->name('rag.capabilities.show');
 });
