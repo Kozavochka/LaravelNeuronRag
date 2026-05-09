@@ -117,6 +117,10 @@ final class DocumentIndexingService
             return $extractor->extract($absolutePath);
         }
 
+        if (mb_strtolower($document->extension) === 'docx') {
+            return $this->convertDocxWithFallback($document, $absolutePath);
+        }
+
         $conversion = $this->markitdown->convert(
             absolutePath: $absolutePath,
             originalFilename: $document->original_filename,
@@ -131,6 +135,41 @@ final class DocumentIndexingService
                 'converted_by' => 'markitdown',
             ],
         );
+    }
+
+    private function convertDocxWithFallback(Document $document, string $absolutePath): ExtractedDocumentText
+    {
+        try {
+            $conversion = $this->markitdown->convert(
+                absolutePath: $absolutePath,
+                originalFilename: $document->original_filename,
+                mimeType: $document->mime_type,
+            );
+
+            return new ExtractedDocumentText(
+                content: $conversion->markdown,
+                metadata: [
+                    'format' => 'markdown',
+                    'source_format' => 'docx',
+                    'converted_by' => 'markitdown',
+                ],
+            );
+        } catch (\Throwable $throwable) {
+            $extractor = $this->extractorFactory->for('docx', $document->mime_type);
+            $local = $extractor->extract($absolutePath);
+
+            return new ExtractedDocumentText(
+                content: $local->content,
+                metadata: [
+                    ...$local->metadata,
+                    'converted_by' => 'local_docx_extractor',
+                    'markitdown_fallback' => true,
+                    'markitdown_error' => $throwable->getMessage(),
+                ],
+                headings: $local->headings,
+                title: $local->title,
+            );
+        }
     }
 
     private function shouldConvertWithMarkitdown(string $extension): bool

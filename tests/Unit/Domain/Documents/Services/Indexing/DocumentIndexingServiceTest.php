@@ -6,7 +6,9 @@ namespace Tests\Unit\Domain\Documents\Services\Indexing;
 
 use App\Domain\Documents\DTO\PreparedChunk;
 use App\Domain\Documents\DTO\MarkitdownHealthResult;
+use App\Domain\Documents\DTO\ExtractedDocumentText;
 use App\Domain\Documents\Contracts\MarkitdownClientInterface;
+use App\Domain\Documents\Services\TextExtraction\DocumentTextExtractor;
 use App\Domain\Documents\Services\Indexing\DocumentIndexingService;
 use App\Domain\Documents\Services\TextExtraction\TextExtractorFactory;
 use App\Domain\Documents\Services\TextProcessing\ChunkFilter;
@@ -119,5 +121,61 @@ class DocumentIndexingServiceTest extends TestCase
 
         self::assertFalse($method->invoke($service, 'docx'));
         self::assertFalse($method->invoke($service, 'md'));
+    }
+
+    public function test_it_falls_back_to_local_docx_extractor_when_markitdown_conversion_fails(): void
+    {
+        $extractor = new class implements DocumentTextExtractor {
+            public function supports(string $extension, ?string $mimeType = null): bool
+            {
+                return $extension === 'docx';
+            }
+
+            public function extract(string $path): ExtractedDocumentText
+            {
+                return new ExtractedDocumentText(
+                    content: 'Local docx content',
+                    metadata: ['format' => 'docx'],
+                );
+            }
+        };
+
+        $factory = new TextExtractorFactory([$extractor]);
+
+        $markitdown = $this->createMock(MarkitdownClientInterface::class);
+        $markitdown->method('health')->willReturn(new MarkitdownHealthResult(
+            isAvailable: true,
+            status: 'ok',
+        ));
+        $markitdown->expects(self::once())
+            ->method('convert')
+            ->willThrowException(new \RuntimeException('markitdown timeout'));
+
+        $service = new DocumentIndexingService(
+            extractorFactory: $factory,
+            sanitizer: new RagTextSanitizer(),
+            recursiveChunker: new RecursiveTextChunker(),
+            markdownChunker: new MarkdownAwareChunker(),
+            metadataEnricher: new ChunkMetadataEnricher(),
+            chunkFilter: new ChunkFilter(),
+            embeddings: $this->createMock(EmbeddingsProviderInterface::class),
+            vectorStore: new PgVectorStore(telemetry: new RagQueryTelemetry()),
+            markitdown: $markitdown,
+        );
+
+        $document = new Document();
+        $document->extension = 'docx';
+        $document->mime_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        $document->original_filename = 'test.docx';
+
+        $method = new \ReflectionMethod($service, 'convertDocxWithFallback');
+        $method->setAccessible(true);
+
+        /** @var ExtractedDocumentText $result */
+        $result = $method->invoke($service, $document, '/tmp/test.docx');
+
+        self::assertSame('Local docx content', $result->content);
+        self::assertSame('local_docx_extractor', $result->metadata['converted_by']);
+        self::assertTrue($result->metadata['markitdown_fallback']);
     }
 }
