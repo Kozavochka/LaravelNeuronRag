@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Documents\Services\Indexing;
 
+use App\Domain\Documents\Contracts\MarkitdownClientInterface;
+use App\Domain\Documents\DTO\ExtractedDocumentText;
 use App\Domain\Documents\DTO\PreparedChunk;
 use App\Domain\Documents\Services\TextExtraction\TextExtractorFactory;
 use App\Domain\Documents\Services\TextProcessing\ChunkFilter;
@@ -29,6 +31,7 @@ final class DocumentIndexingService
         private readonly ChunkFilter $chunkFilter,
         private readonly EmbeddingsProviderInterface $embeddings,
         private readonly PgVectorStore $vectorStore,
+        private readonly MarkitdownClientInterface $markitdown,
     ) {
     }
 
@@ -40,10 +43,7 @@ final class DocumentIndexingService
         ]);
 
         try {
-            $disk = config('rag.documents.disk', 'local');
-            $absolutePath = Storage::disk($disk)->path((string) $document->source_path);
-            $extractor = $this->extractorFactory->for($document->extension, $document->mime_type);
-            $extracted = $extractor->extract($absolutePath);
+            $extracted = $this->extract($document);
             $normalizedText = $this->sanitizer->sanitize($extracted->content);
             $versionHash = hash('sha256', $normalizedText);
 
@@ -104,6 +104,87 @@ final class DocumentIndexingService
 
             throw $throwable;
         }
+    }
+
+    private function extract(Document $document): ExtractedDocumentText
+    {
+        $disk = config('rag.documents.disk', 'local');
+        $absolutePath = Storage::disk($disk)->path((string) $document->source_path);
+
+        if (! $this->shouldConvertWithMarkitdown($document->extension)) {
+            $extractor = $this->extractorFactory->for($document->extension, $document->mime_type);
+
+            return $extractor->extract($absolutePath);
+        }
+
+        if (mb_strtolower($document->extension) === 'docx') {
+            return $this->convertDocxWithFallback($document, $absolutePath);
+        }
+
+        $conversion = $this->markitdown->convert(
+            absolutePath: $absolutePath,
+            originalFilename: $document->original_filename,
+            mimeType: $document->mime_type,
+        );
+
+        return new ExtractedDocumentText(
+            content: $conversion->markdown,
+            metadata: [
+                'format' => 'markdown',
+                'source_format' => $document->extension,
+                'converted_by' => 'markitdown',
+            ],
+        );
+    }
+
+    private function convertDocxWithFallback(Document $document, string $absolutePath): ExtractedDocumentText
+    {
+        try {
+            $conversion = $this->markitdown->convert(
+                absolutePath: $absolutePath,
+                originalFilename: $document->original_filename,
+                mimeType: $document->mime_type,
+            );
+
+            return new ExtractedDocumentText(
+                content: $conversion->markdown,
+                metadata: [
+                    'format' => 'markdown',
+                    'source_format' => 'docx',
+                    'converted_by' => 'markitdown',
+                ],
+            );
+        } catch (\Throwable $throwable) {
+            $extractor = $this->extractorFactory->for('docx', $document->mime_type);
+            $local = $extractor->extract($absolutePath);
+
+            return new ExtractedDocumentText(
+                content: $local->content,
+                metadata: [
+                    ...$local->metadata,
+                    'converted_by' => 'local_docx_extractor',
+                    'markitdown_fallback' => true,
+                    'markitdown_error' => $throwable->getMessage(),
+                ],
+                headings: $local->headings,
+                title: $local->title,
+            );
+        }
+    }
+
+    private function shouldConvertWithMarkitdown(string $extension): bool
+    {
+        $extension = mb_strtolower($extension);
+
+        if (in_array($extension, ['md', 'markdown'], true)) {
+            return false;
+        }
+
+        if ($extension === 'docx') {
+            return $this->markitdown->health()->isAvailable;
+        }
+
+        return true;
     }
 
     /**

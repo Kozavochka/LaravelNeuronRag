@@ -48,6 +48,7 @@
         <a href="{{ route('admin.documents.index') }}">Documents</a>
         <a href="{{ route('admin.documents.create') }}">Upload</a>
         <a href="{{ route('admin.rag-queries.index') }}">RAG Queries</a>
+        <a href="{{ route('admin.integrations.markitdown') }}">Integrations</a>
     </div>
 
     @if (session('status'))

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Domain\Documents\Contracts\MarkitdownClientInterface;
+use App\Domain\Documents\DTO\MarkitdownHealthResult;
 use App\Domain\Documents\Jobs\ProcessDocumentJob;
 use App\Domain\Rag\DTO\RagChatResult;
 use App\Domain\Rag\DTO\RagChatSource;
@@ -11,12 +13,19 @@ use App\Domain\Rag\Services\RagChatRuntime;
 use App\Models\Document;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class RagApiTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Cache::forget('rag:markitdown:health');
+    }
 
     public function test_documents_index_returns_paginated_payload(): void
     {
@@ -41,6 +50,7 @@ class RagApiTest extends TestCase
 
     public function test_document_upload_accepts_markdown_files_and_dispatches_indexing(): void
     {
+        $this->mockMarkitdownHealth(false);
         Queue::fake();
 
         $response = $this->post('/api/rag/documents', [
@@ -54,6 +64,52 @@ class RagApiTest extends TestCase
 
         $this->assertDatabaseCount('documents', 1);
         Queue::assertPushed(ProcessDocumentJob::class);
+    }
+
+    public function test_document_upload_accepts_extended_type_when_markitdown_is_available(): void
+    {
+        $this->mockMarkitdownHealth(true);
+        Queue::fake();
+
+        $response = $this->post('/api/rag/documents', [
+            'file' => UploadedFile::fake()->create('scan.pdf', 128, 'application/pdf'),
+        ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('data.original_filename', 'scan.pdf')
+            ->assertJsonPath('data.extension', 'pdf');
+
+        Queue::assertPushed(ProcessDocumentJob::class);
+    }
+
+    public function test_document_upload_rejects_extended_type_when_markitdown_is_unavailable(): void
+    {
+        $this->mockMarkitdownHealth(false);
+
+        $response = $this->postJson('/api/rag/documents', [
+            'file' => UploadedFile::fake()->create('scan.pdf', 128, 'application/pdf'),
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['file']);
+    }
+
+    public function test_capabilities_endpoint_returns_dynamic_extensions(): void
+    {
+        $this->mockMarkitdownHealth(true);
+
+        $response = $this->getJson('/api/rag/capabilities');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.markitdown.health.status', 'ok')
+            ->assertJsonPath('data.markitdown.health.is_available', true)
+            ->assertJsonPath('data.documents.base_extensions.0', 'md');
+
+        $allowed = $response->json('data.documents.allowed_extensions');
+        $this->assertContains('pdf', $allowed);
     }
 
     public function test_document_show_returns_persisted_document(): void
@@ -178,5 +234,16 @@ class RagApiTest extends TestCase
         $response
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['retrieval_mode']);
+    }
+
+    private function mockMarkitdownHealth(bool $available): void
+    {
+        $this->mock(MarkitdownClientInterface::class, function ($mock) use ($available): void {
+            $mock->shouldReceive('health')
+                ->andReturn(new MarkitdownHealthResult(
+                    isAvailable: $available,
+                    status: $available ? 'ok' : 'down',
+                ));
+        });
     }
 }

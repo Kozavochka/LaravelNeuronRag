@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminDocumentController;
+use App\Http\Controllers\Admin\AdminIntegrationController;
 use App\Http\Controllers\Admin\AdminRagQueryController;
 use Illuminate\Support\Facades\Route;
 
@@ -37,4 +38,7 @@ Route::prefix('admin')
         Route::get('/rag-queries/{ragQuery}', [AdminRagQueryController::class, 'show'])
             ->whereNumber('ragQuery')
             ->name('rag-queries.show');
+
+        Route::get('/integrations/markitdown', [AdminIntegrationController::class, 'markitdown'])
+            ->name('integrations.markitdown');
     });
